@@ -7,16 +7,24 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-app.get("/", (req, res) => {
-  res.end("Hello!");
-});
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
+app.set("view engine", "ejs");
 
 app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
+  const templateVars = { greeting: "Hello World!" };
+  res.render("hello_world", templateVars);
+});
+
+app.get("/urls", (req, res) => {
+  const templateVars = { urls: urlDatabase };
+  res.render("urls_index", templateVars);
+});
+
+app.get("/urls/:id", (req, res) => {
+  console.log("id", req.params.id)
+  console.log("longURL", urlDatabase[req.params.id])
+  const templateVars = { id: req.params.id, longURL:urlDatabase[req.params.id] };
+  res.render("urls_show", templateVars);
+
 });
 
 app.listen(PORT, () => {
