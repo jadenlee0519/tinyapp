@@ -18,5 +18,28 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
     </div>
-  </nav>
-</header>
+        <div class="justify-content-center text-align-center">
+          <!--Creating a form that POSTs to login-->
+          <% if (!username) { %> 
+          <form class="form-inline" action="/login" method="POST" >
+            <div class="form-group mb-2">
+              <input 
+                class="form-control" 
+                type="text" 
+                name="username" 
+                placeholder="Username" 
+                style="width: 250px; margin: 1em" />
+                <button type="submit" class="btn btn-outline-dark">Login</button>
+              </div>
+            </form>
+            <% } else { %> 
+              <form class="form-inline" action="/logout" method="POST">
+                <div class="form-group mb-2">
+                  <label>Logged in as: <%= username %></label>
+                  <button type="submit" class="btn btn-outline-dark ml-2">Logout</button>
+                </div>
+              </form>
+              <% } %> 
+          </div>
+    </nav>
+  </header>
