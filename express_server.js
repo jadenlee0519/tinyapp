@@ -1,9 +1,17 @@
 // DataBase
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "admin",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
+
+
 
 const usersDb = {
   admin: {
@@ -16,14 +24,39 @@ const usersDb = {
 
 // Helper Funcs
 
+// returns the only the links the user has access to
+const getUserDb = (cookie) => {
+  let currentDb = {};
+  let currentUser = cookie;
+  for (const urls in urlDatabase) {
+    if (urlDatabase[urls].userID === currentUser) {
+      let key = urls;
+      let value = urlDatabase[urls]["longURL"];
+      currentDb[key] = value;
+    }
+  }
+  return currentDb;
+}
+// generates ID used for new users and links
 const generateRandomString = () => {
   return Math.random().toString(36).substring(2, 8);
 }
-
-const addLinkToDatabase = (id, url) => {
-  urlDatabase[id] = url;
+// adds link to global urlDatabase
+const addLinkToDatabase = (id, url, user_id) => {
+  urlDatabase[id] = {"longURL": url, "userID": user_id};
+}
+// verifies if url exists in global urlDatabase
+const urlCheck = (urlID) => {
+  for (const id in urlDatabase) {
+    if (id === urlID) {
+      return true;
+    }
+  }
+  return false;
 }
 
+
+// gets the user_id from cookie
 const getUserByCookie = (cookie) => {
   for (let user in usersDb) {
     if (usersDb[user].id === cookie) {
@@ -32,7 +65,7 @@ const getUserByCookie = (cookie) => {
   }
   return undefined;
 }
-
+// gets user_id from email
 const getUserByEmail = (email) => {
   for (let user in usersDb) {
     if (usersDb[user].email === email) {
@@ -41,7 +74,7 @@ const getUserByEmail = (email) => {
   }
   return undefined;
 }
-
+// verifies password for log-in
 const passwordCheck = (password) => {
   for (let user in usersDb) {
     if (usersDb[user].password === password) {
@@ -50,6 +83,13 @@ const passwordCheck = (password) => {
   }
   return false;
 }
+// gets URL from the url id
+const getUrlbyId = (id, db) => {
+  if (Object.keys(db).includes(id)) {
+    return db[id];
+  }
+  return undefined;
+}
 
 // Settings
 const express = require("express");
@@ -57,10 +97,82 @@ const app = express();
 const PORT = 8080;
 app.set("view engine", "ejs");
 const cookieParser = require('cookie-parser');
-const e = require("express");
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+// Get
+
+app.get("/urls", (req, res) => {
+  const state = getUserByCookie(req.cookies["user_id"])
+  if (!state) {
+    res.send("<h1>Please login to see or add links</h1>");
+  } else {
+    let currentDb = getUserDb(req.cookies["user_id"]);
+    const templateVars = { urls: currentDb, user: getUserByCookie(req.cookies["user_id"]) };
+    res.render("urls_index", templateVars);
+  }
+});
+
+app.get("/", (req, res) => {
+  let currentDb = getUserDb(req.cookies["user_id"]);
+  const templateVars = { urls: currentDb, user: getUserByCookie(req.cookies["user_id"]) };
+  res.render("urls_index", templateVars);
+});
+
+app.get("/urls/new", (req, res) => {
+  const state = getUserByCookie(req.cookies["user_id"])
+  if (!state) {
+    res.redirect("/login");
+  } else {
+    const templateVars = { user: getUserByCookie(req.cookies["user_id"]) };
+    res.render("urls_new", templateVars);
+  }
+});
+
+app.get("/urls/:id", (req, res) => {
+  const state = getUserByCookie(req.cookies["user_id"])
+  let currentDb = getUserDb(req.cookies["user_id"]);
+  if (!urlCheck(req.params.id)) {
+    res.status(400).send("<h1>URL does not exist</h1>");
+  } else if (!state) {
+    res.send("Please login to see or add links");
+  } else if (currentDb[req.params.id] === undefined) {
+    res.send("<h1>You don't have access to this link or it doesn't exist</h1>");
+  } else {
+    const templateVars = { id: req.params.id, longURL: currentDb[req.params.id], user: getUserByCookie(req.cookies["user_id"]) };
+    res.render("urls_show", templateVars);
+  }
+});
+
+app.get("/register", (req, res) => {
+  const state = getUserByCookie(req.cookies["user_id"])
+  if (state) {
+    res.redirect("/urls");
+  } else {
+    const templateVars = { user: state };
+    res.render("urls_register", templateVars);
+  }
+});
+
+app.get("/login", (req, res) => {
+  const state = getUserByCookie(req.cookies["user_id"])
+  if (state) {
+    res.redirect("/urls");
+  } else {
+    const templateVars = { user: state };
+    res.render("urls_login", templateVars)
+  }
+});
+
+app.get("/u/:id", (req, res) => {
+  let currentDb = getUserDb(req.cookies["user_id"]);
+  const longURL = getUrlbyId(req.params.id, currentDb);
+  if (!longURL) {
+    res.send("URL does not exist");
+  } else {
+    res.redirect(longURL);
+  }
+});
 
 // Post
 
@@ -94,58 +206,38 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const id = generateRandomString();
-  const longURL = req.body.longURL;
-  addLinkToDatabase(id, longURL);
-  res.redirect(`/urls/${id}`);
+  const state = getUserByCookie(req.cookies["user_id"])
+  if (!state) {
+    res.send("Please login to create a new URL");
+  } else {
+    const id = generateRandomString();
+    const longURL = req.body.longURL;
+    const userID = req.cookies["user_id"];
+    addLinkToDatabase(id, longURL, userID);
+    res.redirect(`/urls/${id}`);
+  }
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  delete urlDatabase[req.params.id]
+  const state = getUserByCookie(req.cookies["user_id"])
+  let currentDb = getUserDb(req.cookies["user_id"]);
+  if (!urlCheck(req.params.id)) {
+    res.status(400).send("<h1>URL does not exist</h1>");
+  } else if (!state) {
+    res.send("<h1>Please login edit or delete links</h1>");
+  } else if (currentDb[req.params.id] === undefined) {
+    res.send("<h1>You don't have access to this link</h1>");
+  } else {
+  delete currentDb[req.params.id]
   res.redirect("/");
+  }
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  urlDatabase[req.params.id] = req.body.longURL;
+  urlDatabase[req.params.id]["longURL"] = req.body.longURL;
   res.redirect("/");
 });
 
-// Get
-
-app.get("/", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: getUserByCookie(req.cookies["user_id"]) };
-  res.render("urls_index", templateVars);
-});
-
-app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: getUserByCookie(req.cookies["user_id"]) };
-  res.render("urls_index", templateVars);
-});
-
-app.get("/urls/new", (req, res) => {
-  const templateVars = { user: getUserByCookie(req.cookies["user_id"]) };
-  res.render("urls_new", templateVars);
-});
-
-app.get("/urls/:id", (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user: getUserByCookie(req.cookies["user_id"]) };
-  res.render("urls_show", templateVars);
-});
-
-app.get("/register", (req, res) => {
-  const templateVars = { user: getUserByCookie(req.cookies["user_id"]) };
-  res.render("urls_register", templateVars);
-});
-
-app.get("/login", (req, res) => {
-  const templateVars = { user: getUserByCookie(req.cookies["user_id"]) };
-  res.render("urls_login", templateVars)
-});
-
-app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
-  res.redirect(longURL);
-});
 
 // Port listener
 
