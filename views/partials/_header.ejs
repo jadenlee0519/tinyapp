@@ -11,26 +11,23 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
     </div>
-  
-      <% if (user) { %>
-      
-        <h5 style="margin-right: 1em; margin-top: 0.5em;">Logged in as <%= user.email %>   </h5>
- 
-          <form class="form-inline" method="POST" action="/logout">
-            <input type="submit" value="Log out" class="btn btn-outline-dark">
-          </form>
-       
-        <% } else if (!user) { %>
-        
-  
-            <form class="form-inline" method="get" action="/login">
-              <input type="submit" value="Log In" class="btn btn-outline-dark">
-            </form>
-            <form class="form-inline" method="get" action="/register">
-              <input type="submit" value="Register" class="btn btn-outline-dark">
-            </form>
-          <% } %>
-    
+
+    <% if (user) { %>
+      <p style="margin-right: 1em; margin-top: 0.5em; ">Logged in as <b>
+          <%= user.email %>
+        </b> </p>
+      <form class="form-inline" method="POST" action="/logout">
+        <input type="submit" value="Log out" class="btn btn-outline-dark">
+      </form>
+      <% } else if (!user) { %>
+        <form class="form-inline" method="get" action="/login">
+          <input type="submit" value="Log In" class="btn btn-outline-light">
+        </form>
+        <form class="form-inline" method="get" action="/register" style="margin-left: 8px;">
+          <input type="submit" value="Register" class="btn btn-outline-light">
+        </form>
+        <% } %>
+
 
 
   </nav>
